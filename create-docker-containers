@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MOUNT_POINT=/mnt/media-center
+MOUNT_POINT=/mnt/volume-fra1-01
 VPN_PROVIDER="NORDVPN"
 VPN_CONFIG="UK"
 VPN_USERNAME="username"
@@ -23,7 +23,7 @@ docker create \
         --name=radarr \
         -v $MOUNT_POINT/radarr-config:/config \
         -v $MOUNT_POINT/plex/movies:/movies \
-        -v $MOUNT_POINT/transmission/completed:/downloads \
+        -v $MOUNT_POINT/transmission:/downloads \
         -v $MOUNT_POINT/mp4_automator:/config_mp4_automator \
         -v /etc/localtime:/etc/localtime:ro \
         -e PGID=1000 -e PUID=1000  \
@@ -35,7 +35,7 @@ docker create \
 	--name sonarr \
 	-v $MOUNT_POINT/sonarr/config:/config \
 	-v $MOUNT_POINT/plex/tv:/tv \
-	-v $MOUNT_POINT/transmission/completed:/downloads \
+	-v $MOUNT_POINT/transmission:/downloads \
 	-v $MOUNT_POINT/mp4_automator:/config_mp4_automator \
         -v /etc/localtime:/etc/localtime:ro \
         -e PUID=1000 -e PGID=1000 \
@@ -60,12 +60,22 @@ docker create \
 	-v $MOUNT_POINT/plex:/data   \
 	timhaak/plex
 
-mkdir -p $MOUNT_POINT/mp4_automator && \
-wget https://raw.githubusercontent.com/mdhiggins/sickbeard_mp4_automator/master/autoProcess.ini.sample -O $MOUNT_POINT/mp4_automator/autoProcess.ini
+if [ ! -f "$MOUNT_POINT/mp4_automator/autoProcess.ini" ]
+then
+  mkdir -p $MOUNT_POINT/mp4_automator && \
+  wget https://raw.githubusercontent.com/mdhiggins/sickbeard_mp4_automator/master/autoProcess.ini.sample -O $MOUNT_POINT/mp4_automator/autoProcess.ini
+fi
 
 MYDIR="$(dirname "$(realpath "$0")")"
-ln -sf $MYDIR/convertRadarrMovie.sh $MOUNT_POINT/mp4_automator/convertRadarrMovie.sh
-ln -sf $MYDIR/convertSonarrShow.sh $MOUNT_POINT/mp4_automator/convertSonarrShow.sh
+if [ ! -f "$MYDIR/convertRadarrMovie.sh" ]
+then
+  cp -R $MYDIR/convertRadarrMovie.sh $MOUNT_POINT/mp4_automator/
+fi
+
+if [ ! -f "$MYDIR/convertSonarrShow.sh" ]
+then
+  cp -R $MYDIR/convertSonarrShow.sh $MOUNT_POINT/mp4_automator/
+fi
 
 #	-p 32400:32400 \
 #	-p 1900:1900/udp \
