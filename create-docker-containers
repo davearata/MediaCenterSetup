@@ -32,13 +32,15 @@ docker create \
 
 docker create \
 	--name sonarr \
-	-p 8989:8989 \
-	-e PUID=1000 -e PGID=1000 \
-	-v /dev/rtc:/dev/rtc:ro \
 	-v $MOUNT_POINT/sonarr/config:/config \
 	-v $MOUNT_POINT/plex/tv:/tv \
 	-v $MOUNT_POINT/transmission/completed:/downloads \
-	linuxserver/sonarr
+	-v $MOUNT_POINT/mp4_automator:/config_mp4_automator \
+        -v /etc/localtime:/etc/localtime:ro \
+        -e PUID=1000 -e PGID=1000 \
+        -e TZ=Europe/London \
+        -p 8989:8989 \
+        aront/sonarr
 
 docker create \
 	--name=jackett \
