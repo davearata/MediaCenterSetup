@@ -66,17 +66,6 @@ then
   wget https://raw.githubusercontent.com/mdhiggins/sickbeard_mp4_automator/master/autoProcess.ini.sample -O $MOUNT_POINT/mp4_automator/autoProcess.ini
 fi
 
-MYDIR="$(dirname "$(realpath "$0")")"
-if [ ! -f "$MYDIR/convertRadarrMovie.sh" ]
-then
-  cp -R $MYDIR/convertRadarrMovie.sh $MOUNT_POINT/mp4_automator/
-fi
-
-if [ ! -f "$MYDIR/convertSonarrShow.sh" ]
-then
-  cp -R $MYDIR/convertSonarrShow.sh $MOUNT_POINT/mp4_automator/
-fi
-
 #	-p 32400:32400 \
 #	-p 1900:1900/udp \
 #	-p 3005:3005 \
