@@ -24,10 +24,11 @@ docker create \
         -v $MOUNT_POINT/radarr-config:/config \
         -v $MOUNT_POINT/transmission/completed:/downloads \
         -v $MOUNT_POINT/plex/movies:/movies \
+        -v $MOUNT_POINT/mp4_automator:/config_mp4_automator \
         -e PGID=1000 -e PUID=1000  \
         -e TZ=Europe/London \
         -p 7878:7878 \
-        linuxserver/radarr
+        aront/radarr
 
 docker create \
 	--name sonarr \
