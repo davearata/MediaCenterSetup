@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MOUNT_POINT=/mnt/volume-fra1-01
+MOUNT_POINT=/mnt/media-center
 VPN_PROVIDER="NORDVPN"
 VPN_CONFIG="UK"
 VPN_USERNAME="username"
@@ -59,6 +59,13 @@ docker create \
 	-v $MOUNT_POINT/plex-config:/config \
 	-v $MOUNT_POINT/plex:/data   \
 	timhaak/plex
+
+mkdir -p $MOUNT_POINT/mp4_automator && \
+wget https://raw.githubusercontent.com/mdhiggins/sickbeard_mp4_automator/master/autoProcess.ini.sample -O $MOUNT_POINT/mp4_automator/autoProcess.ini
+
+MYDIR="$(dirname "$(realpath "$0")")"
+ln -sf $MYDIR/convertRadarrMovie.sh $MOUNT_POINT/mp4_automator/convertRadarrMovie.sh
+ln -sf $MYDIR/convertSonarrShow.sh $MOUNT_POINT/mp4_automator/convertSonarrShow.sh
 
 #	-p 32400:32400 \
 #	-p 1900:1900/udp \
