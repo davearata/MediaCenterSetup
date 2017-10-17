@@ -20,14 +20,14 @@ docker create --privileged \
 	haugene/transmission-openvpn;
 
 docker create \
-  --name=radarr \
-    -v $MOUNT_POINT/radarr-config:/config \
-    -v $MOUNT_POINT/transmission/completed:/downloads \
-    -v $MOUNT_POINT/plex/movies:/movies \
-    -e PGID=1000 -e PUID=1000  \
-    -e TZ=Europe/London \
-    -p 7878:7878 \
-  linuxserver/radarr
+        --name=radarr \
+        -v $MOUNT_POINT/radarr-config:/config \
+        -v $MOUNT_POINT/transmission/completed:/downloads \
+        -v $MOUNT_POINT/plex/movies:/movies \
+        -e PGID=1000 -e PUID=1000  \
+        -e TZ=Europe/London \
+        -p 7878:7878 \
+        linuxserver/radarr
 
 docker create \
 	--name sonarr \
