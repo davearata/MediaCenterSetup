@@ -23,7 +23,7 @@ services:
 
   radarr:
     container_name: radarr
-    image: linuxserver/radarr:latest
+    image: aront/radarr:latest
     ports:
       - 7878:7878
     environment:
@@ -34,13 +34,14 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${MOUNT_POINT}/radarr-config:/config
       - ${MOUNT_POINT}/transmission:/downloads
+      - ${MOUNT_POINT}/mp4_automator:/config_mp4_automator
       - ${MOUNT_POINT}/plex/movies:/movies
     depends_on:
       - transmission
   
   sonarr:
     container_name: sonarr
-    image: linuxserver/sonarr:latest
+    image: aront/sonarr:latest
     ports:
       - 8989:8989
     environment:
@@ -51,6 +52,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${MOUNT_POINT}/sonarr/config:/config
       - ${MOUNT_POINT}/transmission:/downloads
+      - ${MOUNT_POINT}/mp4_automator:/config_mp4_automator
       - ${MOUNT_POINT}/plex/tv:/tv
     depends_on:
       - transmission
