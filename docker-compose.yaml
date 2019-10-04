@@ -1,91 +1,244 @@
 version: '3'
 
 services:
-  transmission:
-    container_name: transmission
-    image: haugene/transmission-openvpn:latest
-    privileged: true
-    restart: always
+  ddns-updater:
+    image: qmcgaw/ddns-updater
+    container_name: ddns-updater
+    network_mode: bridge
     ports:
-      - 9091:9091
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - OPENVPN_PROVIDER=${VPN_PROVIDER}
-      - OPENVPN_CONFIG=${VPN_CONFIG}
-      - OPENVPN_USERNAME=${VPN_USERNAME}
-      - OPENVPN_PASSWORD=${VPN_PASSWORD}
-      - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
-      - LOCAL_NETWORK=${LOCAL_NETWORK}
+      - 8000:8000/tcp
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${MOUNT_POINT}/transmission:/data
+      - ${HOME}/ddns-updater-data:/updater/data
+    environment:
+      - DELAY=300
+      - ROOTURL=/
+      - LISTENINGPORT=8000
+      - LOGGING=human
+      - NODEID=0
+      - VIRTUAL_HOST=ddns.${DOMAIN}
+      - VIRTUAL_PORT=8000
+      - LETSENCRYPT_HOST=ddns.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+    restart: always
+    depends_on:
+      - nginx-proxy
 
+  # ----------------------------------------
+  # DELUGEVPN
+  # Deluge Torrent Client + VPN
+  # ---------------------------------------- 
+  deluge:
+    image: binhex/arch-delugevpn
+    container_name: deluge
+    restart: unless-stopped
+    network_mode: 'bridge'
+    ports:
+      - '${IP_ADDRESS}:8112:8112'
+      - '${IP_ADDRESS}:8118:8118'
+      - '${IP_ADDRESS}:58846:58846'
+      - '${IP_ADDRESS}:58946:58946'
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_ENABLED=yes
+      - VPN_USER=${VPN_USERNAME}
+      - VPN_PASS=${VPN_PASSWORD}
+      - VPN_REMOTE=${VPN_REMOTE}
+      - VPN_PORT=1198
+      - VPN_PROTOCOL=udp
+      - VPN_DEVICE_TYPE=tun
+      - VPN_PROV=${VPN_PROVIDER}
+      - STRONG_CERTS=no
+      - ENABLE_PRIVOXY=yes
+      - STRICT_PORT_FORWARD=yes
+      - LAN_NETWORK=${CIDR_ADDRESS}
+      - NAME_SERVERS=37.235.1.174,8.8.8.8,37.235.1.177,8.8.4.4
+      - DEBUG=false
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=deluge.${DOMAIN}
+      - VIRTUAL_PORT=8112
+      - LETSENCRYPT_HOST=deluge.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+    volumes:
+      - '${MOUNT_POINT}/deluge/data:/data'
+      - '${MOUNT_POINT}/deluge/config:/config'
+      - './ovpn/${VPN_PROVIDER}:/config/openvpn'
+      - '/etc/localtime:/etc/localtime:ro'
+    depends_on:
+      - nginx-proxy
+
+  # ----------------------------------------
+  # RADARR
+  # Movie Management
+  # ----------------------------------------
   radarr:
+    image: mdhiggins/radarr-sma:latest
     container_name: radarr
-    image: aront/radarr:latest
+    restart: unless-stopped
+    network_mode: "bridge"
     ports:
       - 7878:7878
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=${TIME_ZONE}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=radarr.${DOMAIN}
+      - VIRTUAL_PORT=7878
+      - LETSENCRYPT_HOST=radarr.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${MOUNT_POINT}/radarr-config:/config
-      - ${MOUNT_POINT}/transmission:/downloads
-      - ${MOUNT_POINT}/mp4_automator:/config_mp4_automator
+      - ${HOME}/radarr-config:/config
+      - ${MOUNT_POINT}/deluge/data:/data
       - ${MOUNT_POINT}/plex/movies:/movies
+      - ${MOUNT_POINT}/mp4_automator/autoProcess.ini:/usr/local/bin/sma/sickbeard_mp4_automator/autoProcess.ini
     depends_on:
-      - transmission
-  
+      - deluge
+      - jackett
+      - nginx-proxy
+
   sonarr:
     container_name: sonarr
-    image: aront/sonarr:latest
+    image: mdhiggins/sonarr-sma:latest
+    restart: unless-stopped
+    network_mode: "bridge"
     ports:
       - 8989:8989
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=${TIME_ZONE}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=sonarr.${DOMAIN}
+      - VIRTUAL_PORT=8989
+      - LETSENCRYPT_HOST=sonarr.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${MOUNT_POINT}/sonarr/config:/config
-      - ${MOUNT_POINT}/transmission:/downloads
-      - ${MOUNT_POINT}/mp4_automator:/config_mp4_automator
+      - ${HOME}/sonarr-config:/config
+      - ${MOUNT_POINT}/deluge/data:/data
+      - ${MOUNT_POINT}/mp4_automator/autoProcess.ini:/usr/local/bin/sma/sickbeard_mp4_automator/autoProcess.ini
       - ${MOUNT_POINT}/plex/tv:/tv
     depends_on:
-      - transmission
-  
+      - deluge
+      - jackett
+      - nginx-proxy
+ 
+  # ----------------------------------------
+  # JACKETT
+  # RSS/TORZNAB Feed Creator
+  # ---------------------------------------- 
   jackett:
-    container_name: jackett
     image: linuxserver/jackett:latest
+    container_name: jackett
+    restart: unless-stopped
+    network_mode: 'bridge'
     ports:
-      - 9117:9117
+      - '${IP_ADDRESS}:9117:9117'
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=${TIME_ZONE}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=jackett.${DOMAIN}
+      - LETSENCRYPT_HOST=jackett.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
     volumes:
       - ${MOUNT_POINT}/jackett/config/:/config
       - ${MOUNT_POINT}/jackett/downloads/:/downloads
 
+  # ----------------------------------------
+  # PORTAINER
+  # Docker Container Management
+  # ----------------------------------------
+  portainer:
+    image: portainer/portainer:latest
+    container_name: portainer
+    restart: unless-stopped
+    network_mode: 'bridge'
+    ports:
+      - '${IP_ADDRESS}:9000:9000'
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=portainer.${DOMAIN}
+      - LETSENCRYPT_HOST=portainer.${DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+    volumes:
+       - '${MOUNT_POINT}/portainer:/data'
+       - '/var/run/docker.sock:/var/run/docker.sock'
+       - '/etc/localtime:/etc/localtime:ro'
+
+  # ----------------------------------------
+  # NGINX-PROXY
+  # Pretty Hostname Support for Services
+  # ----------------------------------------
+  nginx-proxy:
+    image: jwilder/nginx-proxy:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    network_mode: 'bridge'
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - '${MOUNT_POINT}/nginx-proxy/etc/nginx/vhost.d:/etc/nginx/vhost.d'
+      - '${MOUNT_POINT}/nginx-proxy/usr/share/nginx/html:/usr/share/nginx/html'
+      - '${MOUNT_POINT}/letsencrypt/certs:/etc/nginx/certs:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/var/run/docker.sock:/tmp/docker.sock:ro'
+
+  # ----------------------------------------
+  # LETS ENCRYPT
+  # SSL Support Companion for nginx-proxy
+  # ----------------------------------------
+  letsencrypt-nginx-proxy-companion:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt
+    restart: unless-stopped
+    network_mode: 'bridge'
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - '${MOUNT_POINT}/nginx-proxy/etc/nginx/vhost.d:/etc/nginx/vhost.d'
+      - '${MOUNT_POINT}/nginx-proxy/usr/share/nginx/html:/usr/share/nginx/html'
+      - '${MOUNT_POINT}/letsencrypt/certs:/etc/nginx/certs:rw'
+      - '/etc/localtime:/etc/localtime:ro'
+      - '/var/run/docker.sock:/var/run/docker.sock:ro'
+    depends_on:
+      - 'nginx-proxy'         
+         
+  # ----------------------------------------
+  # PLEX
+  # Robust Media Server
+  # ----------------------------------------
   plex:
     container_name: plex
     image: plexinc/pms-docker:latest
+    restart: unless-stopped
+    network_mode: 'host'
     ports:
-     - 32400:32400
-     - 1900:1900/udp
-     - 3005:3005
-     - 5353:5353/udp
-     - 8324:8324
-     - 32410:32410/udp
-     - 32412:32412/udp
-     - 32413:32413/udp
-     - 32414:32414/udp
-     - 32469:32469
-    restart: always
-    network_mode: host
+      - '${IP_ADDRESS}:32400:32400/tcp'
+      - '${IP_ADDRESS}:3005:3005/tcp'
+      - '${IP_ADDRESS}:8324:8324/tcp'
+      - '${IP_ADDRESS}:32469:32469/tcp'
+      - '${IP_ADDRESS}:1900:1900/udp'
+      - '${IP_ADDRESS}:32410:32410/udp'
+      - '${IP_ADDRESS}:32412:32412/udp'
+      - '${IP_ADDRESS}:32413:32413/udp'
+      - '${IP_ADDRESS}:32414:32414/udp'
+    environment:  
+      - PLEX_CLAIM=${PMSTOKEN}
+      - ADVERTISE_IP=http://${IP_ADDRESS}:32400/
+      - ALLOWED_NETWORKS=${CIDR_ADDRESS}
+      - PLEX_UID=${PUID}
+      - PLEX_GID=${PGID}
+    hostname: ${HOSTNAME}
     volumes:
-      - ${MOUNT_POINT}/plex-config/:/config
+      - ${HOME}/plex-config/:/config
       - ${MOUNT_POINT}/plex/:/data
+      - ${HOME}/plex-transcode/:/transcode
+      - '/etc/localtime:/etc/localtime:ro'
