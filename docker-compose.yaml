@@ -43,12 +43,7 @@ services:
       - VPN_ENABLED=yes
       - VPN_USER=${VPN_USERNAME}
       - VPN_PASS=${VPN_PASSWORD}
-      - VPN_REMOTE=${VPN_REMOTE}
-      - VPN_PORT=1198
-      - VPN_PROTOCOL=udp
-      - VPN_DEVICE_TYPE=tun
       - VPN_PROV=${VPN_PROVIDER}
-      - STRONG_CERTS=no
       - ENABLE_PRIVOXY=yes
       - STRICT_PORT_FORWARD=yes
       - LAN_NETWORK=${CIDR_ADDRESS}
@@ -63,7 +58,6 @@ services:
     volumes:
       - '${MOUNT_POINT}/deluge/data:/data'
       - '${MOUNT_POINT}/deluge/config:/config'
-      - './ovpn/${VPN_PROVIDER}:/config/openvpn'
       - '/etc/localtime:/etc/localtime:ro'
     depends_on:
       - nginx-proxy
@@ -73,7 +67,7 @@ services:
   # Movie Management
   # ----------------------------------------
   radarr:
-    image: mdhiggins/radarr-sma:latest
+    image: linuxserver/radarr:latest
     container_name: radarr
     restart: unless-stopped
     network_mode: "bridge"
@@ -89,10 +83,9 @@ services:
       - LETSENCRYPT_EMAIL=${EMAIL}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ${HOME}/radarr-config:/config
+      - ${MOUNT_POINT}/radarr:/config
       - ${MOUNT_POINT}/deluge/data:/data
       - ${MOUNT_POINT}/plex/movies:/movies
-      - ${MOUNT_POINT}/mp4_automator/autoProcess.ini:/usr/local/bin/sma/sickbeard_mp4_automator/autoProcess.ini
     depends_on:
       - deluge
       - jackett
@@ -178,8 +171,8 @@ services:
     restart: unless-stopped
     network_mode: 'bridge'
     ports:
-      - '80:80'
-      - '443:443'
+      - '8080:8080'
+      - '4433:4433'
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -238,7 +231,7 @@ services:
       - PLEX_GID=${PGID}
     hostname: ${HOSTNAME}
     volumes:
-      - ${HOME}/plex-config/:/config
+      - ${MOUNT_POINT}/plex-config/:/config
       - ${MOUNT_POINT}/plex/:/data
-      - ${HOME}/plex-transcode/:/transcode
+      - ${MOUNT_POINT}/plex-transcode/:/transcode
       - '/etc/localtime:/etc/localtime:ro'
